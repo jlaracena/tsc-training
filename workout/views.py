@@ -142,6 +142,10 @@ def save_session(request):
         )
 
     elif session_type in EXERCISES:
+        session.warm_up_done   = request.POST.get('warm_up_done') == '1'
+        session.cool_down_done = request.POST.get('cool_down_done') == '1'
+        session.save()
+
         for exercise in EXERCISES[session_type]:
             for set_num, reps in SETS:
                 is_bw = exercise in BODYWEIGHT_EXERCISES

@@ -129,6 +129,17 @@
 {% else %}
 <form method="post" action="{% url 'save_session' %}">
   {% csrf_token %}
+
+  <!-- Warm Up -->
+  <div class="card shadow-sm mb-3">
+    <div class="card-body d-flex align-items-center gap-3">
+      <input type="hidden" name="warm_up_done" value="0">
+      <input class="form-check-input mt-0" type="checkbox" name="warm_up_done" value="1" id="warm_up"
+             {% if session.warm_up_done %}checked{% endif %} style="width:1.4rem;height:1.4rem">
+      <label for="warm_up" class="mb-0 fw-semibold" style="cursor:pointer">🔥 Dynamic Warm Up</label>
+    </div>
+  </div>
+
   <div class="row g-3">
     {% for exercise in exercises %}
     <div class="col-12">
@@ -180,6 +191,16 @@
     </div>
     {% endfor %}
   </div>
+  <!-- Cool Down -->
+  <div class="card shadow-sm mt-3">
+    <div class="card-body d-flex align-items-center gap-3">
+      <input type="hidden" name="cool_down_done" value="0">
+      <input class="form-check-input mt-0" type="checkbox" name="cool_down_done" value="1" id="cool_down"
+             {% if session.cool_down_done %}checked{% endif %} style="width:1.4rem;height:1.4rem">
+      <label for="cool_down" class="mb-0 fw-semibold" style="cursor:pointer">🧊 Static Cool Down</label>
+    </div>
+  </div>
+
   <button type="submit" class="btn btn-danger w-100 mt-3 mb-5">💪 Guardar entrenamiento</button>
 </form>
 {% endif %}

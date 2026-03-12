@@ -60,6 +60,8 @@ BODYWEIGHT_EXERCISES = {'Push-ups', 'Lunges', 'Squats'}
 class Session(models.Model):
     date         = models.DateField(unique=True)
     session_type = models.CharField(max_length=20, choices=SESSION_TYPES)
+    warm_up_done = models.BooleanField(default=False)
+    cool_down_done = models.BooleanField(default=False)
     notes        = models.TextField(blank=True)
 
     class Meta:
