@@ -1,0 +1,197 @@
+{% extends "workout/base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0">{{ today|date:"l, d \d\e F" }}</h4>
+    <span class="badge mt-1
+      {% if 'weights' in session_type %}badge-weights
+      {% elif session_type == 'football' %}badge-football
+      {% else %}badge-rest{% endif %}">
+      {{ session_type_display }}
+    </span>
+  </div>
+  {% if session %}
+  <span class="badge bg-success fs-6">✓ Registrado</span>
+  {% endif %}
+</div>
+
+<!-- Macros del día -->
+<div class="row g-2 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card macro-card macro-kcal shadow-sm p-3 text-center">
+      <div class="fs-3 fw-bold text-info">{{ macros.tdee }}</div>
+      <div class="text-muted small">kcal / día</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card macro-card macro-protein shadow-sm p-3 text-center">
+      <div class="fs-3 fw-bold text-danger">{{ macros.protein_g }}g</div>
+      <div class="text-muted small">proteína</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card macro-card macro-carb shadow-sm p-3 text-center">
+      <div class="fs-3 fw-bold text-warning">{{ macros.carb_g }}g</div>
+      <div class="text-muted small">carbohidratos</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card macro-card macro-fat shadow-sm p-3 text-center">
+      <div class="fs-3 fw-bold text-success">{{ macros.fat_g }}g</div>
+      <div class="text-muted small">grasas</div>
+    </div>
+  </div>
+</div>
+<p class="text-muted small mb-4">{{ macros.note }}</p>
+
+<!-- Fuentes de proteína vegetariana -->
+<details class="mb-4">
+  <summary class="fw-semibold text-danger" style="cursor:pointer">🌱 Fuentes vegetarianas para {{ macros.protein_g }}g de proteína</summary>
+  <div class="row g-2 mt-2">
+    {% for s in macros.veg_sources %}
+    <div class="col-6 col-md-3">
+      <div class="card shadow-sm p-2 text-center">
+        <div class="fw-bold">{{ s.food }}</div>
+        <div class="text-muted small">{{ s.per_100g }}g prot / {{ s.unit }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</details>
+
+<!-- Peso corporal -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h6 class="card-title text-muted">Peso corporal hoy</h6>
+    <form method="post" action="{% url 'save_metrics' %}" class="d-flex gap-2 align-items-end">
+      {% csrf_token %}
+      <div>
+        <label class="form-label form-label-sm">kg</label>
+        <input type="number" name="weight_kg" step="0.1" min="30" max="200"
+               value="{{ metrics.weight_kg|default:'' }}"
+               class="form-control form-control-sm" style="width:100px" placeholder="78.0">
+      </div>
+      {% if metrics %}
+      <div class="text-muted small pb-2">IMC: <strong>{{ metrics.bmi }}</strong></div>
+      {% endif %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Guardar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── DESCANSO ── -->
+{% if session_type == 'rest' %}
+<div class="card shadow-sm text-center p-5">
+  <div style="font-size:3rem">😴</div>
+  <h5 class="mt-3">Día de descanso</h5>
+  <p class="text-muted">Aprovecha para recuperar. Mantén la proteína aunque bajes los carbos.</p>
+</div>
+
+<!-- ── FÚTBOL ── -->
+{% elif session_type == 'football' %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <h5 class="card-title">⚽ Registro de fútbol</h5>
+    <form method="post" action="{% url 'save_session' %}">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">¿Fuiste hoy?</label>
+        <div class="d-flex gap-3">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="completed" id="yes" value="1"
+                   {% if not session or session.football.completed %}checked{% endif %}>
+            <label class="form-check-label" for="yes">Sí ✅</label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="completed" id="no" value="0"
+                   {% if session and not session.football.completed %}checked{% endif %}>
+            <label class="form-check-label" for="no">No ❌</label>
+          </div>
+        </div>
+      </div>
+      <div id="absence-section" style="display:none" class="mb-3">
+        <label class="form-label">Motivo de ausencia</label>
+        <select name="absence_reason" class="form-select form-select-sm" style="max-width:250px">
+          {% for value, label in absence_reasons %}
+          <option value="{{ value }}" {% if session and session.football.absence_reason == value %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-success">Guardar</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── PESAS ── -->
+{% else %}
+<form method="post" action="{% url 'save_session' %}">
+  {% csrf_token %}
+  <div class="row g-3">
+    {% for exercise in exercises %}
+    <div class="col-12">
+      <div class="exercise-card shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">{{ exercise }}</h6>
+          {% if last_weights|dictsort:exercise %}
+          <span class="badge bg-secondary">Última: {{ last_weights|default_if_none:'' }}
+            {% for k, v in last_weights.items %}{% if k == exercise %}{{ v }} kg{% endif %}{% endfor %}
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Header -->
+        <div class="set-row text-muted small fw-semibold">
+          <div>Serie</div>
+          <div>Reps</div>
+          {% if exercise not in bodyweight_exercises %}<div>Peso/mano (kg)</div>{% else %}<div></div>{% endif %}
+        </div>
+
+        {% for set_num, default_reps in sets %}
+        {% with log=session.logs.all %}
+        <div class="set-row">
+          <div class="text-muted small">S{{ set_num }} (×{{ default_reps }})</div>
+          <div>
+            <input type="number" name="reps_{{ exercise }}_{{ set_num }}"
+                   class="form-control form-control-sm"
+                   min="0" max="50" placeholder="{{ default_reps }}"
+                   value="{% for l in log %}{% if l.exercise_name == exercise and l.set_number == set_num %}{{ l.reps }}{% endif %}{% endfor %}">
+          </div>
+          <div>
+            {% if exercise not in bodyweight_exercises %}
+            <input type="number" name="weight_{{ exercise }}_{{ set_num }}"
+                   class="form-control form-control-sm"
+                   min="0" max="200" step="0.5" placeholder="kg"
+                   value="{% for l in log %}{% if l.exercise_name == exercise and l.set_number == set_num and l.weight_kg %}{{ l.weight_kg }}{% endif %}{% endfor %}">
+            {% endif %}
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <button type="submit" class="btn btn-danger w-100 mt-3 mb-5">💪 Guardar entrenamiento</button>
+</form>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Toggle ausencia fútbol
+  document.querySelectorAll('input[name="completed"]').forEach(r => {
+    r.addEventListener('change', () => {
+      const absent = document.querySelector('input[name="completed"]:checked').value === '0';
+      document.getElementById('absence-section').style.display = absent ? '' : 'none';
+    });
+  });
+  const checkedCompleted = document.querySelector('input[name="completed"]:checked');
+  if (checkedCompleted && checkedCompleted.value === '0') {
+    document.getElementById('absence-section').style.display = '';
+  }
+</script>
+{% endblock %}

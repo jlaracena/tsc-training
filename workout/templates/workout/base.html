@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TSC Training</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background: #f0f2f5; }
+    .navbar { background: #1a1a2e; }
+    .navbar-brand, .nav-link { color: #e0e0e0 !important; }
+    .nav-link.active { color: #fff !important; font-weight: 600; border-bottom: 2px solid #4fc3f7; }
+    .card { border: none; border-radius: 12px; }
+    .macro-card { border-left: 4px solid; }
+    .macro-protein { border-color: #ef5350; }
+    .macro-carb    { border-color: #ffa726; }
+    .macro-fat     { border-color: #66bb6a; }
+    .macro-kcal    { border-color: #4fc3f7; }
+    .exercise-card { background: #fff; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+    .set-row { display: grid; grid-template-columns: 60px 1fr 1fr; gap: 8px; align-items: center; margin-bottom: 6px; }
+    .badge-rest { background: #78909c; }
+    .badge-weights { background: #ef5350; }
+    .badge-football { background: #66bb6a; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg mb-4">
+    <div class="container">
+      <span class="navbar-brand fw-bold">🏋️ TSC Training</span>
+      <div class="navbar-nav ms-auto flex-row gap-3">
+        <a class="nav-link {% if active_tab == 'today' %}active{% endif %}" href="{% url 'today' %}">Hoy</a>
+        <a class="nav-link {% if active_tab == 'history' %}active{% endif %}" href="{% url 'history' %}">Historial</a>
+      </div>
+    </div>
+  </nav>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

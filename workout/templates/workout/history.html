@@ -1,0 +1,131 @@
+{% extends "workout/base.html" %}
+{% block content %}
+
+<h4 class="mb-4">Historial — últimas 12 semanas</h4>
+
+<!-- Progresión de peso corporal -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h6 class="card-title text-muted">Peso corporal</h6>
+    <canvas id="weightChart" height="80"></canvas>
+  </div>
+</div>
+
+<!-- Progresión por ejercicio -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h6 class="card-title text-muted">Progresión de ejercicio</h6>
+    <div class="d-flex gap-2 align-items-end mb-3">
+      <select id="exerciseSelect" class="form-select form-select-sm" style="max-width:320px">
+        <option value="">— Selecciona un ejercicio —</option>
+        {% for ex in all_exercises %}
+        <option value="{{ ex }}">{{ ex }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <canvas id="exerciseChart" height="100"></canvas>
+  </div>
+</div>
+
+<!-- Tabla de sesiones -->
+<div class="card shadow-sm mb-5">
+  <div class="card-body">
+    <h6 class="card-title text-muted">Sesiones registradas</h6>
+    <div class="table-responsive">
+      <table class="table table-sm table-striped">
+        <thead class="table-dark">
+          <tr><th>Fecha</th><th>Tipo</th><th>Detalle</th></tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td>{{ s.date|date:"d/m/Y" }}</td>
+            <td>
+              <span class="badge {% if 'weights' in s.session_type %}bg-danger{% elif s.session_type == 'football' %}bg-success{% else %}bg-secondary{% endif %}">
+                {{ s.get_session_type_display }}
+              </span>
+            </td>
+            <td>
+              {% if s.is_football %}
+                {% if s.football.completed %}✅ Completado
+                {% else %}❌ {{ s.football.get_absence_reason_display }}{% endif %}
+              {% elif s.is_weights %}
+                {{ s.logs.count }} sets registrados
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-muted text-center">Sin sesiones registradas aún.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const metricsData = {{ metrics_json|safe }};
+
+// Gráfico de peso corporal
+if (metricsData.length > 0) {
+  new Chart(document.getElementById('weightChart'), {
+    type: 'line',
+    data: {
+      labels: metricsData.map(d => d.date),
+      datasets: [{
+        label: 'Peso (kg)',
+        data: metricsData.map(d => d.weight),
+        borderColor: '#4fc3f7',
+        backgroundColor: 'rgba(79,195,247,0.1)',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 4,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: false } }
+    }
+  });
+}
+
+// Gráfico de progresión por ejercicio
+let exerciseChart = null;
+
+document.getElementById('exerciseSelect').addEventListener('change', async function() {
+  const exercise = this.value;
+  if (!exercise) return;
+
+  const res = await fetch(`/api/progress/${encodeURIComponent(exercise)}/`);
+  const json = await res.json();
+
+  if (exerciseChart) exerciseChart.destroy();
+
+  const trend = json.trend;
+  if (!trend.length) return;
+
+  exerciseChart = new Chart(document.getElementById('exerciseChart'), {
+    type: 'line',
+    data: {
+      labels: trend.map(d => d.date),
+      datasets: [{
+        label: 'Peso máximo (kg/mano)',
+        data: trend.map(d => d.max_weight),
+        borderColor: '#ef5350',
+        backgroundColor: 'rgba(239,83,80,0.1)',
+        tension: 0.3,
+        fill: true,
+        pointRadius: 5,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: true } },
+      scales: { y: { beginAtZero: false } }
+    }
+  });
+});
+</script>
+{% endblock %}
