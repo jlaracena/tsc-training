@@ -168,6 +168,12 @@
             {% endif %}
           </div>
         </div>
+        <div class="mb-1">
+          <button type="button" class="btn btn-sm btn-outline-primary w-100 start-rest"
+                  data-label="{{ exercise }} — Serie {{ set_num }}">
+            ✓ Serie {{ set_num }} completada — descansar 46s
+          </button>
+        </div>
         {% endwith %}
         {% endfor %}
       </div>
@@ -179,6 +185,23 @@
 {% endif %}
 
 {% endblock %}
+
+<!-- Contador de descanso flotante -->
+<div id="rest-timer" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+     z-index:1000; width:320px; background:#1a1a2e; color:#fff; border-radius:16px;
+     padding:16px 20px; box-shadow:0 8px 32px rgba(0,0,0,0.4);">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <span id="timer-label" class="small text-muted"></span>
+    <button type="button" id="timer-cancel" class="btn-close btn-close-white btn-sm"></button>
+  </div>
+  <div class="text-center mb-2">
+    <span id="timer-count" style="font-size:3rem; font-weight:700; line-height:1;">46</span>
+    <span class="text-muted ms-1">seg</span>
+  </div>
+  <div class="progress" style="height:8px; border-radius:4px;">
+    <div id="timer-bar" class="progress-bar bg-info" style="width:100%; transition:width 1s linear;"></div>
+  </div>
+</div>
 
 {% block scripts %}
 <script>
@@ -193,5 +216,69 @@
   if (checkedCompleted && checkedCompleted.value === '0') {
     document.getElementById('absence-section').style.display = '';
   }
+
+  // ── Contador de descanso ──────────────────────────────────────────────────
+  const REST_SECONDS = 46;
+  let timerInterval = null;
+
+  function beep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.15, 0.3].forEach(offset => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.12);
+        osc.start(ctx.currentTime + offset);
+        osc.stop(ctx.currentTime + offset + 0.12);
+      });
+    } catch(e) {}
+  }
+
+  function startTimer(label) {
+    if (timerInterval) clearInterval(timerInterval);
+
+    const timerEl   = document.getElementById('rest-timer');
+    const countEl   = document.getElementById('timer-count');
+    const barEl     = document.getElementById('timer-bar');
+    const labelEl   = document.getElementById('timer-label');
+
+    let seconds = REST_SECONDS;
+    labelEl.textContent = label;
+    countEl.textContent = seconds;
+    barEl.style.width = '100%';
+    timerEl.style.display = 'block';
+
+    // Forzar reflow para que la transición CSS arranque bien
+    void barEl.offsetWidth;
+
+    timerInterval = setInterval(() => {
+      seconds--;
+      countEl.textContent = seconds;
+      barEl.style.width = (seconds / REST_SECONDS * 100) + '%';
+
+      if (seconds <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        beep();
+        countEl.textContent = '¡Listo!';
+        barEl.style.width = '0%';
+        setTimeout(() => { timerEl.style.display = 'none'; }, 2000);
+      }
+    }, 1000);
+  }
+
+  document.querySelectorAll('.start-rest').forEach(btn => {
+    btn.addEventListener('click', () => startTimer(btn.dataset.label));
+  });
+
+  document.getElementById('timer-cancel')?.addEventListener('click', () => {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = null;
+    document.getElementById('rest-timer').style.display = 'none';
+  });
 </script>
 {% endblock %}
