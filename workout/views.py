@@ -109,6 +109,16 @@ def today(request):
     macros = calculate_macros(session_type)
     metrics = BodyMetrics.objects.first()
 
+    # Razones personalizadas previas (notas de sesiones saltadas con motivo "Otro")
+    custom_skip_reasons = list(
+        Session.objects
+        .filter(skipped=True, skip_reason='other')
+        .exclude(notes='')
+        .values_list('notes', flat=True)
+        .distinct()
+        .order_by('-date')[:10]
+    )
+
     return render(request, 'workout/today.html', {
         'active_tab': 'today',
         'today': today_date,
@@ -122,6 +132,7 @@ def today(request):
         'macros': macros,
         'metrics': metrics,
         'absence_reasons': ABSENCE_REASONS,
+        'custom_skip_reasons': custom_skip_reasons,
     })
 
 
