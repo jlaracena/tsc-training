@@ -130,66 +130,83 @@
 <form method="post" action="{% url 'save_session' %}">
   {% csrf_token %}
 
-  <!-- Warm Up -->
+  <!-- No entrené hoy -->
   <div class="card shadow-sm mb-3">
-    <div class="card-body d-flex align-items-center gap-3">
-      <input type="hidden" name="warm_up_done" value="0">
-      <input class="form-check-input mt-0" type="checkbox" name="warm_up_done" value="1" id="warm_up"
-             {% if session.warm_up_done %}checked{% endif %} style="width:1.4rem;height:1.4rem">
-      <label for="warm_up" class="mb-0 fw-semibold" style="cursor:pointer">🔥 Dynamic Warm Up</label>
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-3">
+        <input type="hidden" name="skipped" value="0">
+        <input class="form-check-input mt-0" type="checkbox" name="skipped" value="1" id="skipped"
+               {% if session.skipped %}checked{% endif %} style="width:1.4rem;height:1.4rem">
+        <label for="skipped" class="mb-0 fw-semibold text-secondary" style="cursor:pointer">❌ No entrené hoy</label>
+      </div>
+      <div id="skip-reason-section" {% if not session.skipped %}style="display:none"{% endif %} class="mt-2">
+        <select name="skip_reason" class="form-select form-select-sm" style="max-width:250px">
+          {% for value, label in absence_reasons %}
+          <option value="{{ value }}" {% if session.skip_reason == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
   </div>
 
-  <div class="row g-3">
-    {% for exercise in exercises %}
-    <div class="col-12">
-      <div class="exercise-card shadow-sm">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h6 class="mb-0">{{ exercise }}</h6>
-          {% if last_weights|dictsort:exercise %}
-          <span class="badge bg-secondary">Última: {{ last_weights|default_if_none:'' }}
-            {% for k, v in last_weights.items %}{% if k == exercise %}{{ v }} kg{% endif %}{% endfor %}
-          </span>
-          {% endif %}
-        </div>
-
-        <!-- Header -->
-        <div class="set-row text-muted small fw-semibold">
-          <div>Serie</div>
-          <div>Reps</div>
-          {% if exercise not in bodyweight_exercises %}<div>Peso/mano (kg)</div>{% else %}<div></div>{% endif %}
-        </div>
-
-        {% for set_num, default_reps in sets %}
-        {% with log=session.logs.all %}
-        <div class="set-row">
-          <div class="text-muted small">S{{ set_num }} (×{{ default_reps }})</div>
-          <div>
-            <input type="number" name="reps_{{ exercise }}_{{ set_num }}"
-                   class="form-control form-control-sm"
-                   min="0" max="50" placeholder="{{ default_reps }}"
-                   value="{% for l in log %}{% if l.exercise_name == exercise and l.set_number == set_num %}{{ l.reps }}{% endif %}{% endfor %}">
-          </div>
-          <div>
-            {% if exercise not in bodyweight_exercises %}
-            <input type="number" name="weight_{{ exercise }}_{{ set_num }}"
-                   class="form-control form-control-sm"
-                   min="0" max="200" step="0.5" placeholder="kg"
-                   value="{% for l in log %}{% if l.exercise_name == exercise and l.set_number == set_num and l.weight_kg %}{{ l.weight_kg }}{% endif %}{% endfor %}">
-            {% endif %}
-          </div>
-        </div>
-        <div class="mb-1">
-          <button type="button" class="btn btn-sm btn-outline-primary w-100 start-rest"
-                  data-label="{{ exercise }} — Serie {{ set_num }}">
-            ✓ Serie {{ set_num }} completada — descansar 46s
-          </button>
-        </div>
-        {% endwith %}
-        {% endfor %}
+  <div id="workout-section" {% if session.skipped %}style="display:none"{% endif %}>
+    <!-- Warm Up -->
+    <div class="card shadow-sm mb-3">
+      <div class="card-body d-flex align-items-center gap-3">
+        <input type="hidden" name="warm_up_done" value="0">
+        <input class="form-check-input mt-0" type="checkbox" name="warm_up_done" value="1" id="warm_up"
+               {% if session.warm_up_done %}checked{% endif %} style="width:1.4rem;height:1.4rem">
+        <label for="warm_up" class="mb-0 fw-semibold" style="cursor:pointer">🔥 Dynamic Warm Up</label>
       </div>
     </div>
-    {% endfor %}
+
+    <div class="row g-3">
+      {% for exercise in exercises %}
+      <div class="col-12">
+        <div class="exercise-card shadow-sm">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">{{ exercise }}</h6>
+            {% for k, v in last_weights.items %}{% if k == exercise %}
+            <span class="badge bg-secondary">Última: {{ v }} kg</span>
+            {% endif %}{% endfor %}
+          </div>
+
+          <!-- Header -->
+          <div class="set-row text-muted small fw-semibold">
+            <div>Serie</div>
+            {% if exercise in bodyweight_exercises %}<div>Reps</div>{% else %}<div>Peso/mano (kg)</div>{% endif %}
+            <div></div>
+          </div>
+
+          {% for set_num, default_reps in sets %}
+          {% with log=session.logs.all %}
+          <div class="set-row">
+            <div class="text-muted small">S{{ set_num }} (×{{ default_reps }})</div>
+            <div>
+              {% if exercise in bodyweight_exercises %}
+              <input type="number" name="reps_{{ exercise }}_{{ set_num }}"
+                     class="form-control form-control-sm" min="0" max="50" placeholder="{{ default_reps }}"
+                     value="{% for l in log %}{% if l.exercise_name == exercise and l.set_number == set_num %}{{ l.reps }}{% endif %}{% endfor %}">
+              {% else %}
+              <input type="number" name="weight_{{ exercise }}_{{ set_num }}"
+                     class="form-control form-control-sm" min="0" max="200" step="0.5" placeholder="kg"
+                     value="{% for l in log %}{% if l.exercise_name == exercise and l.set_number == set_num and l.weight_kg %}{{ l.weight_kg }}{% endif %}{% endfor %}">
+              {% endif %}
+            </div>
+            <div></div>
+          </div>
+          <div class="mb-1">
+            <button type="button" class="btn btn-sm btn-outline-primary w-100 start-rest"
+                    data-label="{{ exercise }} — Serie {{ set_num }}">
+              ✓ Serie {{ set_num }} completada — descansar 46s
+            </button>
+          </div>
+          {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
   <!-- Cool Down -->
   <div class="card shadow-sm mt-3">
@@ -236,6 +253,15 @@
   const checkedCompleted = document.querySelector('input[name="completed"]:checked');
   if (checkedCompleted && checkedCompleted.value === '0') {
     document.getElementById('absence-section').style.display = '';
+  }
+
+  // ── Toggle "No entrené hoy" ───────────────────────────────────────────────
+  const skippedCb = document.getElementById('skipped');
+  if (skippedCb) {
+    skippedCb.addEventListener('change', () => {
+      document.getElementById('skip-reason-section').style.display = skippedCb.checked ? '' : 'none';
+      document.getElementById('workout-section').style.display     = skippedCb.checked ? 'none' : '';
+    });
   }
 
   // ── Contador de descanso ──────────────────────────────────────────────────

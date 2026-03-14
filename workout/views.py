@@ -142,31 +142,42 @@ def save_session(request):
         )
 
     elif session_type in EXERCISES:
+        skipped = request.POST.get('skipped') == '1'
+        session.skipped        = skipped
+        session.skip_reason    = request.POST.get('skip_reason', '') if skipped else ''
         session.warm_up_done   = request.POST.get('warm_up_done') == '1'
         session.cool_down_done = request.POST.get('cool_down_done') == '1'
         session.save()
 
-        for exercise in EXERCISES[session_type]:
-            for set_num, reps in SETS:
-                is_bw = exercise in BODYWEIGHT_EXERCISES
-                reps_done = request.POST.get(f'reps_{exercise}_{set_num}')
-                weight = request.POST.get(f'weight_{exercise}_{set_num}')
+        if not skipped:
+            for exercise in EXERCISES[session_type]:
+                for set_num, default_reps in SETS:
+                    is_bw = exercise in BODYWEIGHT_EXERCISES
+                    if is_bw:
+                        reps_done = request.POST.get(f'reps_{exercise}_{set_num}')
+                        weight_val = None
+                        if not reps_done:
+                            continue
+                        try:
+                            reps_val = int(reps_done)
+                        except (ValueError, TypeError):
+                            continue
+                    else:
+                        weight = request.POST.get(f'weight_{exercise}_{set_num}')
+                        reps_val = default_reps
+                        if not weight:
+                            continue
+                        try:
+                            weight_val = Decimal(weight)
+                        except (ValueError, TypeError):
+                            continue
 
-                if not reps_done:
-                    continue
-
-                try:
-                    reps_val = int(reps_done)
-                    weight_val = Decimal(weight) if weight and not is_bw else None
-                except (ValueError, TypeError):
-                    continue
-
-                ExerciseLog.objects.update_or_create(
-                    session=session,
-                    exercise_name=exercise,
-                    set_number=set_num,
-                    defaults={'reps': reps_val, 'weight_kg': weight_val}
-                )
+                    ExerciseLog.objects.update_or_create(
+                        session=session,
+                        exercise_name=exercise,
+                        set_number=set_num,
+                        defaults={'reps': reps_val, 'weight_kg': weight_val}
+                    )
 
     return redirect('today')
 
