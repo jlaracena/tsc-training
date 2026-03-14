@@ -145,6 +145,7 @@ def save_session(request):
         skipped = request.POST.get('skipped') == '1'
         session.skipped        = skipped
         session.skip_reason    = request.POST.get('skip_reason', '') if skipped else ''
+        session.notes          = request.POST.get('notes', '').strip() if skipped else ''
         session.warm_up_done   = request.POST.get('warm_up_done') == '1'
         session.cool_down_done = request.POST.get('cool_down_done') == '1'
         session.save()

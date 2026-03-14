@@ -139,12 +139,16 @@
                {% if session.skipped %}checked{% endif %} style="width:1.4rem;height:1.4rem">
         <label for="skipped" class="mb-0 fw-semibold text-secondary" style="cursor:pointer">❌ No entrené hoy</label>
       </div>
-      <div id="skip-reason-section" {% if not session.skipped %}style="display:none"{% endif %} class="mt-2">
-        <select name="skip_reason" class="form-select form-select-sm" style="max-width:250px">
+      <div id="skip-reason-section" {% if not session.skipped %}style="display:none"{% endif %} class="mt-2 d-flex flex-column gap-2">
+        <select name="skip_reason" id="skip_reason_select" class="form-select form-select-sm" style="max-width:250px">
           {% for value, label in absence_reasons %}
           <option value="{{ value }}" {% if session.skip_reason == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
+        <div id="skip-notes-section" {% if session.skip_reason != 'other' %}style="display:none"{% endif %}>
+          <input type="text" name="notes" class="form-control form-control-sm" style="max-width:350px"
+                 placeholder="Describe la razón..." value="{{ session.notes }}">
+        </div>
       </div>
     </div>
   </div>
@@ -257,11 +261,23 @@
 
   // ── Toggle "No entrené hoy" ───────────────────────────────────────────────
   const skippedCb = document.getElementById('skipped');
+  const skipSelect = document.getElementById('skip_reason_select');
+
+  function toggleSkipNotes() {
+    const isOther = skipSelect && skipSelect.value === 'other';
+    const notesSection = document.getElementById('skip-notes-section');
+    if (notesSection) notesSection.style.display = isOther ? '' : 'none';
+  }
+
   if (skippedCb) {
     skippedCb.addEventListener('change', () => {
       document.getElementById('skip-reason-section').style.display = skippedCb.checked ? '' : 'none';
       document.getElementById('workout-section').style.display     = skippedCb.checked ? 'none' : '';
     });
+  }
+  if (skipSelect) {
+    skipSelect.addEventListener('change', toggleSkipNotes);
+    toggleSkipNotes();
   }
 
   // ── Contador de descanso ──────────────────────────────────────────────────
